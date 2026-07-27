@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Cyberbullying Detection Chat</title>
+
+<style>
+body {
+    background: black;
+    color: white;
+    font-family: Arial;
+}
+
+.container {
+    width: 60%;
+    margin: auto;
+}
+
+.chat-box {
+    background: #111;
+    padding: 15px;
+    min-height: 350px;
+    margin-top: 20px;
+    border-radius: 5px;
+    overflow-y: auto;
+}
+
+.user {
+    text-align: right;
+    color: lightblue;
+    margin: 10px;
+}
+
+/* ✅ FINAL COLOR RULE */
+.green { color: lime; }
+.red { color: red; }
+
+/* 🔥 CYBERBULLYING LABEL */
+.cyber-label {
+    color: red;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.meta {
+    font-size: 12px;
+    margin-bottom: 10px;
+}
+
+textarea {
+    width: 100%;
+    height: 80px;
+    margin-top: 10px;
+    background: #222;
+    color: white;
+    padding: 10px;
+}
+
+button {
+    margin-top: 5px;
+    padding: 6px 12px;
+    cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>💬 Cyberbullying Detection Chat</h2>
+
+<div class="chat-box" id="chat"></div>
+
+<textarea id="text" placeholder="Type your message..."></textarea>
+<br>
+<button onclick="send()">Send</button>
+
+</div>
+
+<script>
+
+// 🎯 FINAL COLOR LOGIC (FIXED)
+function getColorClass(data) {
+    if (data.final_label === "Cyberbullying") {
+        return "red";
+    }
+    return "green"; // always green for safe
+}
+
+function send() {
+
+    let textBox = document.getElementById("text");
+    let text = textBox.value.trim();
+
+    if (text === "") {
+        alert("Enter message");
+        return;
+    }
+
+    let chat = document.getElementById("chat");
+
+    fetch("/predict", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: "text=" + encodeURIComponent(text)
+    })
+    .then(res => res.json())
+    .then(data => {
+
+        let html = "";
+        let colorClass = getColorClass(data);
+
+        // ✅ NON-CYBERBULLYING
+        if (data.final_label === "Non-Cyberbullying") {
+
+            html = `
+                <div class="user">👤 ${data.user_input}</div>
+                <div class="${colorClass}">🤖 ${data.response}</div>
+                <div class="meta ${colorClass}">
+                    Score: ${data.score} | ${data.category}
+                </div>
+            `;
+
+        } 
+        // 🚨 CYBERBULLYING
+        else {
+
+            let id = "msg_" + Math.random();
+            let safeText = JSON.stringify(data.user_input);
+
+            html = `
+                <div class="red" id="${id}">
+                    ⚠️ Content Hidden 
+                    <button onclick='viewMsg("${id}", 
+${safeText})'>View</button>
+                </div>
+                <div class="cyber-label">Cyberbullying</div>
+            `;
+        }
+
+        chat.innerHTML += html;
+
+        textBox.value = "";
+        chat.scrollTop = chat.scrollHeight;
+    })
+    .catch(error => {
+        console.error("Error:", error);
+        alert("Server error. Make sure Flask is running.");
+    });
+}
+
+// 👁️ VIEW → SHOW → AUTO HIDE
+function viewMsg(id, text) {
+
+    let el = document.getElementById(id);
+
+    el.innerHTML = `<div class="user">👤 ${text}</div>`;
+
+    setTimeout(() => {
+        el.innerHTML = `
+            ⚠️ Content Hidden 
+            <button onclick='viewMsg("${id}", 
+${JSON.stringify(text)})'>View</button>
+        `;
+    }, 3000);
+}
+
+</script>
+
+</body>
+</html>
